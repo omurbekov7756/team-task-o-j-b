@@ -4,7 +4,7 @@ const API = "http://localhost:8000/cars";
 //? где добавляем карточки
 const list = document.querySelector("#car-list");
 
-// ? вызываем для ввода данный в Админ панель
+// ? вызываем для ввода данных в Админ панель
 const addForm = document.querySelector("#add-form");
 const carNameInp = document.querySelector("#carname");
 const priceInp = document.querySelector("#price");
@@ -12,28 +12,37 @@ const descriptionInp = document.querySelector("#description");
 const imageInp = document.querySelector("#image");
 
 //? вызываем модальное окно
+const modal = document.querySelector(".modal");
 const editCarInp = document.querySelector("#edit-car");
 const editPriceInp = document.querySelector("#edit-price");
 const editDescriptionInp = document.querySelector("#edit-descr");
 const editImageInp = document.querySelector("#edit-image");
-// const saveEditBtn = document.querySelector("#btn-save-edit");
+const saveEditBtn = document.querySelector("#btn-save-edit");
 
+//? инпуты для поиска
 const searchInput = document.querySelector("#search");
+//? переменная по которой делаем запрос на поиск
 let searchV = "";
 
 //? пагинация
 const pagList = document.querySelector(".pag-list");
 const prev = document.querySelector(".prev");
 const next = document.querySelector(".next");
-const lim = 3;
-let currPage = 1;
-let pTC = 3;
 
+//? макс кол машин
+const lim = 3;
+//? текущая страница
+let currPage = 1;
+//? макс кол страниц
+let pTC = 1;
+
+//? первоначальное отображение
 getCars();
 
+//? функция для получение данных
 async function getCars() {
   const res = await fetch(
-    `${API}?title_like=${searchV}&_limit=${lim}&_page=${currPage}`
+    `${API}?carname_like=${searchV}&_limit=${lim}&_page=${currPage}`
   );
   const count = res.headers.get("x-total-count");
   pTC = Math.ceil(count / lim);
@@ -41,6 +50,7 @@ async function getCars() {
   render(data);
 }
 
+//? функция для добавления
 async function addCar(car) {
   await fetch(API, {
     method: "POST",
@@ -52,6 +62,7 @@ async function addCar(car) {
   getCars();
 }
 
+//? функция для удаления
 async function deleteCar(id) {
   await fetch(`${API}/${id}`, {
     method: "DELETE",
@@ -60,17 +71,17 @@ async function deleteCar(id) {
 }
 
 //? функция для получения одного продукта
-async function getOneCar(id) {
+async function getOneCars(id) {
   const res = await fetch(`${API}/${id}`);
   const data = await res.json();
   return data;
 }
 
 //? функция для изменения
-async function editCar(id, updatedCar) {
+async function editCar(id, editedCars) {
   await fetch(`${API}/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(updatedCar),
+    body: JSON.stringify(editedCars),
     headers: {
       "Content-Type": "application/json",
     },
@@ -80,6 +91,7 @@ async function editCar(id, updatedCar) {
 
 // ? функция для отображения
 function render(arr) {
+  //? чтобы не копировало
   list.innerHTML = "";
   arr.forEach((item) => {
     list.innerHTML += `<div class="card m-5" style="width: 18rem">
@@ -89,40 +101,45 @@ function render(arr) {
           alt="..."
         />
         <div class="card-body">
-        <h5 class="card-title">${item.Carname}</h5>
+        <h5 class="card-title">${item.carname}</h5>
         <p class="card-text">${item.description.slice(0, 70)}...</p>
         <p class="card-text">$ ${item.price}</p>
-        <div class="dd">
-        <button id="${item.id}" class="btn-delete">DELETE</button>
-        <button "${item.id}" class="btn-edit">EDIT</button></div>
+        <div class="father">
+    <button id="${item.id}" href="#" class="btn-delete">DELETE</button>
+    <button data-bs-toggle="modal" data-bs-target="#exampleModal" id="${
+      item.id
+    }" href="#" class="btn-edit">EDIT</button></div>
         </div>
-        </div>
-      </div>`;
+        </div>`;
   });
-  getCars();
+  //? чтобы пагинация тоже отображалось
+  rendPag();
 }
 
 //? кнопка для добавления
 addForm.addEventListener("submit", (e) => {
+  //? убираем дефолтное поведение form
   e.preventDefault();
+  //? проверяем все инпуты на заполненность
   if (
     !carNameInp.value.trim() ||
     !priceInp.value.trim() ||
     !descriptionInp.value.trim() ||
     !imageInp.value.trim()
   ) {
-    alert("Заполните все поля");
+    alert("Заполни да ээй");
     return;
   }
-
+  //? обьект для отправки в DB
   const car = {
-    Carname: carNameInp.value,
+    carname: carNameInp.value,
     price: priceInp.value,
     description: descriptionInp.value,
     image: imageInp.value,
   };
   addCar(car);
 
+  //? очищаем инпуты после добавления
   carNameInp.value = "";
   priceInp.value = "";
   descriptionInp.value = "";
@@ -136,39 +153,40 @@ document.addEventListener("click", (e) => {
   }
 });
 
+//? переменная чтобы сохранить id продукта
 let id = null;
 
-// //? кнопка для изменение в модалке
-// document.addEventListener("click", async (e) => {
-//   if (e.target.classList.contains("btn-edit")) {
-//     id = e.target.id;
-//     const car = await getOneCar(e.target.id);
-//     editCarInp.value = car.Carname;
-//     editCarInp.value = car.price;
-//     editDescriptionInp.value = car.description;
-//     editImageInp.value = car.image;
-//   }
-// });
+//? кнопка для изменение в модалке
+document.addEventListener("click", async (e) => {
+  if (e.target.classList.contains("btn-edit")) {
+    id = e.target.id;
+    const cars = await getOneCars(e.target.id);
+    editCarInp.value = cars.carname;
+    editPriceInp.value = cars.price;
+    editDescriptionInp.value = cars.description;
+    editImageInp.value = cars.image;
+  }
+});
 
 // //? кнопка для сохранения
-// saveEditBtn.addEventListener("click", () => {
-//   if (
-//     !editCarInp.value.trim() ||
-//     !editPriceInp.value.trim() ||
-//     !editDescriptionInp.value.trim() ||
-//     !editImageInp.value.trim()
-//   ) {
-//     alert("Заполни да бля!");
-//     return;
-//   }
-//   const updatedCar = {
-//     Carname: editCarInp.value,
-//     price: editPriceInp.value,
-//     description: editDescriptionInp.value,
-//     image: editImageInp,
-//   };
-//   editCar(id, updatedCar);
-// });
+saveEditBtn.addEventListener("click", () => {
+  if (
+    !editCarInp.value.trim() ||
+    !editPriceInp.value.trim() ||
+    !editPriceInp.value.trim() ||
+    !editImageInp.value.trim()
+  ) {
+    alert("Заполни поля");
+    return;
+  }
+  const editedCars = {
+    carname: editCarInp.value,
+    price: editPriceInp.value,
+    description: editDescriptionInp.value,
+    image: editImageInp.value,
+  };
+  editCar(id, editedCars);
+});
 
 //? для поиска
 searchInput.addEventListener("input", () => {
@@ -180,71 +198,50 @@ searchInput.addEventListener("input", () => {
 function rendPag() {
   pagList.innerHTML = "";
   for (let i = 1; i <= pTC; i++) {
-    pagList.innerHTML += `<li class="page-item ${
-      currPage == i ? "active" : ""
-    }">
-        <button class="page-link page_number">${i}</button>
-      </li>`;
+    pagList.innerHTML += `
+      <li class="page-item ${currPage == i ? "active" : ""}">
+         <button class="page-link page_number">${i}</button>
+      </li>
+      `;
   }
+  //? чтобы кнопка prev была не активна на первой странице
   if (currPage == 1) {
     prev.classList.add("disabled");
   } else {
     prev.classList.remove("disabled");
   }
 
+  //? чтобы кнопка next была не активна на последней странице
   if (currPage == pTC) {
-    next.classList("disabled");
+    next.classList.add("disabled");
   } else {
     next.classList.remove("disabled");
   }
 }
 
-// //? кнопка для перехода на определенную страницу
-// document.addEventListener("click", (e) => {
-//   if (e.target.classList.contains("page_number")) {
-//     currPage = e.target.innerText;
-//     getCars();
-//   }
-// });
-
-// //? кнопка для перехода не след страницу
-// next.addEventListener("click", () => {
-//   if (currPage == pTC) {
-//     return;
-//   }
-//   currPage++;
-//   getCars();
-// });
-
-// //? кнопка для перехода не пред страницу
-// prev.addEventListener("click", () => {
-//   if (currPage == 1) {
-//     return;
-//   }
-//   currPage--;
-//   getCars();
-// });
-
-// ! ====================
-let currentPage = 1;
-let limit = 3;
-
-let countPage;
-
-async function pageTotal() {
-  let data = await fetch(`${API}?q=${searchValue}`).then((res) => res.json());
-  countPage = Math.ceil(data.length / limit);
-  console.log(countPage);
-}
-
-prev.addEventListener("click", () => {
-  if (currentPage < 1) return;
-  currentPage--;
-  getCars();
+//? обработчик события чтобы перейти на определенную страницу
+document.addEventListener("click", (e) => {
+  if (e.target.classList.contains("page_number")) {
+    console.log("CLOCK", currPage);
+    currPage = e.target.innerText;
+    getCars();
+  }
 });
+
+//? обработчик события чтобы перейти на следующию страницу
 next.addEventListener("click", () => {
-  if (currentPage >= countPage) return;
-  currentPage++;
+  if (currPage == pTC) {
+    return;
+  }
+  currPage++;
   getCars();
 });
-// getCars();
+
+//? обработчик события чтобы перейти на предыдущую страницу
+prev.addEventListener("click", () => {
+  if (currPage == 1) {
+    return;
+  }
+  currPage--;
+  getCars();
+});
